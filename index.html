@@ -3,538 +3,311 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Ruleta</title>
+    <title>Ruleta Europea</title>
     <link rel="stylesheet" href="reset.css">
-    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="style_new.css">
 </head>
 <body>
     <header>
-        <h1>🎰 Ruleta Europea</h1>
+        <h1>RULETA EUROPEA</h1>
     </header>
 
     <main>
         <!-- Ruleta -->
-        <div class="roulette-area">
+        <section class="roulette-area">
             <div class="marker">▼</div>
             <div id="wheel" class="wheel">
-                <div id="ball" class="ball"></div>
-            </div>
-        </div>
-
-        <!-- Tablero de apuestas (0-36) -->
-        <div class="bet-table" id="betTable"></div>
-
-        <!-- Controles y saldo -->
-        <div class="controls">
-            <div class="balance">Saldo: <span id="balance">1000</span> €</div>
-            <input id="betAmount" type="number" min="1" value="10" placeholder="Cantidad apuesta">
-            <button id="spinBtn" class="btn btn-primary">GIRAR RULETA</button>
-            <button id="clearBets" class="btn btn-danger">Limpiar apuestas</button>
-        </div>
-
-        <!-- Resultado -->
-        <div class="result" id="result">Haz clic en un número y pulsa GIRAR</div>
-    </main>
-
-    <footer>
-        <p>Ruleta Europea (0-36) | Payouts: Número 35:1 | Color/Par/Impar/Alto-Bajo 1:1 | Docena 2:1</p>
-    </footer>
-
-    <div class="shape shape--1" aria-hidden="true"></div>
-    <div class="shape shape--2" aria-hidden="true"></div>
-    <div class="shape shape--3" aria-hidden="true"></div>
-
-    <script>
-    (function(){
-        const wheelNumbers = [0,32,15,19,4,21,2,25,17,34,6,27,13,36,11,30,8,23,10,5,24,16,33,1,20,14,31,9,22,18,29,7,28,12,35,3,26];
-        const N = wheelNumbers.length;
-        const wheel = document.getElementById('wheel');
-        const spinBtn = document.getElementById('spinBtn');
-        const clearBetsBtn = document.getElementById('clearBets');
-        const resultEl = document.getElementById('result');
-        const betAmount = document.getElementById('betAmount');
-        const balanceEl = document.getElementById('balance');
-        const betTableEl = document.getElementById('betTable');
-
-        const sectorAngle = 360 / N;
-        let balance = 1000;
-        let selectedNumber = null;
-
-        // Colores: 0=verde, resto rojo/negro alternando
-        const colors = [];
-        for(let i=0;i<N;i++){
-            const num = wheelNumbers[i];
-            if(num === 0) colors.push('green');
-            else colors.push((colors.length && colors[colors.length-1] === 'red') ? 'black' : 'red');
-        }
-
-        // Construir gradiente de la ruleta
-        const gradientParts = [];
-        for(let i=0;i<N;i++){
-            const col = (colors[i] === 'green') ? '#2ecc71' : (colors[i] === 'red' ? '#ff3333' : '#222');
-            const start = i*sectorAngle;
-            const end = (i+1)*sectorAngle;
-            gradientParts.push(`${col} ${start}deg ${end}deg`);
-        }
-        wheel.style.background = `conic-gradient(${gradientParts.join(',')})`;
-
-        // Añadir números alrededor de la ruleta
-        for(let i=0;i<N;i++){
-            const label = document.createElement('span');
-            label.className = 'wheel-label';
-            label.dataset.pos = i;
-            const angle = i*sectorAngle + sectorAngle/2;
-            label.textContent = wheelNumbers[i];
-            label.style.transform = `rotate(${angle}deg) translateY(-45%) rotate(${-angle}deg)`;
-            wheel.appendChild(label);
-        }
-
-        // Construir tabla de apuestas (0-36)
-        function buildBetTable(){
-            betTableEl.innerHTML = '';
-            const zeroCell = document.createElement('div');
-            zeroCell.className = 'bet-cell green';
-            zeroCell.textContent = '0';
-            zeroCell.addEventListener('click', ()=> selectNumber(0));
-            betTableEl.appendChild(zeroCell);
-
-            for(let i=1;i<=36;i++){
-                const pos = wheelNumbers.indexOf(i);
-                const col = colors[pos] === 'red' ? 'red' : 'black';
-                const c = document.createElement('div');
-                c.className = `bet-cell ${col}`;
-                c.textContent = String(i);
-                c.addEventListener('click', ()=> selectNumber(i));
-                betTableEl.appendChild(c);
-            }
-        }
-        buildBetTable();
-
-        function selectNumber(num){
-            // Limpiar selección anterior
-            document.querySelectorAll('.bet-cell.selected').forEach(el=> el.classList.remove('selected'));
-            // Seleccionar nuevo
-            document.querySelectorAll('.bet-cell').forEach(el=> {
-                if(el.textContent === String(num)) el.classList.add('selected');
-            });
-            selectedNumber = num;
-        }
-
-        function setRotation(deg, duration=6000){
-            wheel.style.transition = `transform ${duration}ms cubic-bezier(0.2, 0.8, 0.2, 1)`;
-            wheel.style.transform = `rotate(${deg}deg)`;
-        }
-
-        function getWinnerFromFinal(finalDeg){
-            const r = ((360 - (finalDeg % 360)) % 360);
-            return Math.floor((r + 0.0001) / sectorAngle) % N;
-        }
-
-        function randomInt(max){ return Math.floor(Math.random()*max); }
-
-        function createConfetti(){
-            const count = 50;
-            for(let i=0;i<count;i++){
-                const d = document.createElement('div');
-                d.className = 'confetti-piece';
-                d.style.background = (i%3===0)?'#ffd36b':(i%3===1?'#ff3333':'#2ecc71');
-                d.style.left = (window.innerWidth/2 + (randomInt(600)-300)) + 'px';
-                d.style.top = (window.innerHeight/4) + 'px';
-                document.body.appendChild(d);
-                requestAnimationFrame(()=>{
-                    const tx = (randomInt(1000)-500);
-                    const ty = (randomInt(800)+300);
-                    const rot = randomInt(720);
-                    d.style.transition = 'transform 1600ms ease-out, opacity 1600ms ease-out';
-                    d.style.transform = `translate(${tx}px, ${ty}px) rotate(${rot}deg)`;
-                    d.style.opacity = '0';
-                });
-                setTimeout(()=> d.remove(), 1700);
-            }
-        }
-
-        function spin(){
-            if(selectedNumber === null){ alert('Selecciona un número antes de girar'); return; }
-            const bet = Number(betAmount.value) || 0;
-            if(bet <= 0){ alert('Introduce una cantidad válida'); return; }
-            if(bet > balance){ alert('Saldo insuficiente'); return; }
-
-            spinBtn.disabled = true;
-            clearBetsBtn.disabled = true;
-            resultEl.textContent = 'Girando...';
-
-            // Deducir apuesta
-            balance -= bet;
-            balanceEl.textContent = balance.toFixed(2);
-
-            const winnerPos = randomInt(N);
-            const spins = 5 + randomInt(4);
-            const finalDeg = spins*360 + winnerPos*sectorAngle + sectorAngle/2;
-            setRotation(finalDeg, 6000);
-
-            const onEnd = ()=>{
-                wheel.style.transition = '';
-                const landedPos = getWinnerFromFinal(finalDeg);
-                const winnerNumber = wheelNumbers[landedPos];
-
-                // Resaltar número ganador
-                document.querySelectorAll('.bet-cell.winner').forEach(el=> el.classList.remove('winner'));
-                document.querySelectorAll('.bet-cell').forEach(el=> {
-                    if(el.textContent === String(winnerNumber)) el.classList.add('winner');
-                });
-
-                // Evaluar resultado
-                let message = `Resultado: ${winnerNumber}`;
-                let won = false;
-                if(selectedNumber === winnerNumber){
-                    const payout = bet * 35;
-                    balance += bet + payout;
-                    message += ` ¡GANASTE ${payout} €!`;
-                    won = true;
-                }else{
-                    message += ` - Perdiste ${bet} €`;
-                }
-
-                resultEl.textContent = message;
-                balanceEl.textContent = balance.toFixed(2);
-
-                if(won) createConfetti();
-
-                // Limpiar y reactivar
-                selectedNumber = null;
-                document.querySelectorAll('.bet-cell.selected').forEach(el=> el.classList.remove('selected'));
-                spinBtn.disabled = false;
-                clearBetsBtn.disabled = false;
-                wheel.removeEventListener('transitionend', onEnd);
-            };
-            wheel.addEventListener('transitionend', onEnd);
-        }
-
-        spinBtn.addEventListener('click', spin);
-        clearBetsBtn.addEventListener('click', ()=>{
-            selectedNumber = null;
-            document.querySelectorAll('.bet-cell.selected').forEach(el=> el.classList.remove('selected'));
-        });
-
-        balanceEl.textContent = balance.toFixed(2);
-    })();
-    </script>
-</body>
-</html>
-
-            <aside class="controls" aria-label="Panel de apuestas">
-                <div class="balance">Saldo: <span id="balance">1000</span> €</div>
-
-                <div class="bet-slip">
-                    <div style="display:flex;gap:8px;margin-bottom:8px;align-items:center;">
-                        <input id="betAmount" type="number" min="1" value="10" style="flex:1;" />
-                        <select id="betType" style="width:160px;">
-                            <option value="number">Número (Straight)</option>
-                            <option value="color">Color (Rojo/Negro)</option>
-                            <option value="parity">Par / Impar</option>
-                            <option value="highlow">Bajo / Alto (1-18 / 19-36)</option>
-                            <option value="dozen">Docena (1-12 / 13-24 / 25-36)</option>
-                        </select>
-                    </div>
-
-                    <div class="bet-row" style="margin-bottom:8px;">
-                        <input id="choiceInput" placeholder="Elección (ej. 7, rojo, par, alto, 2)" style="flex:1;" />
-                        <button id="addBet" class="btn-primary" style="margin-left:8px;">Añadir apuesta</button>
-                    </div>
-
-                    <div class="bet-table" id="betTable" aria-hidden="false"></div>
-
-                    <div class="bet-slip">
-                        <div class="bets-list" id="betsList"></div>
-                        <div class="bet-summary">
-                            <div>Total apuesta: <strong id="totalStake">0</strong> €</div>
-                            <div style="display:flex;gap:8px;"><button id="clearBets" class="btn-danger">Borrar</button><button id="spinBtn" class="btn-primary">Girar</button></div>
-                        </div>
-                    </div>
+                <div class="wheel-inner" id="wheelInner">
+                    <div id="ball" class="ball"></div>
                 </div>
-
-                <div id="result" class="result" role="status" aria-live="polite">Listo — añade apuestas y pulsa Girar.</div>
-                <div class="muted" style="margin-top:8px">Haz clic en un número del recuadro o usa "Añadir apuesta".</div>
-            </aside>
+            </div>
         </section>
 
-        <section class="instructions">
-            <h2>Cómo funciona</h2>
-            <p>Se simula una ruleta europea (0–36). Pagos estándar: <strong>Straight (número)</strong> 35:1, <strong>Docena</strong> 2:1, <strong>Color/Par/Impar/Alto-Bajo</strong> 1:1.</p>
+        <!-- Tablero de apuestas -->
+        <section class="bet-board">
+            <div class="game-info">
+                <div class="balance">Saldo: <span id="balance">1000</span> €</div>
+                <div class="stake-input">
+                    <label for="stakeAmount">Apuesta:</label>
+                    <input id="stakeAmount" type="number" min="1" value="10">
+                    <span>€</span>
+                </div>
+            </div>
+
+            <!-- Números 0-36 -->
+            <div class="bet-section-label">Números</div>
+            <div class="bet-grid" id="numbersGrid"></div>
+
+            <!-- Color -->
+            <div class="bet-section-label">Color</div>
+            <div class="bet-grid">
+                <div class="bet-cell red" data-bet="color" data-choice="red">ROJO</div>
+                <div class="bet-cell black" data-bet="color" data-choice="black">NEGRO</div>
+            </div>
+
+            <!-- Par/Impar -->
+            <div class="bet-section-label">Par / Impar</div>
+            <div class="bet-grid">
+                <div class="bet-cell other" data-bet="parity" data-choice="even">PAR</div>
+                <div class="bet-cell other" data-bet="parity" data-choice="odd">IMPAR</div>
+            </div>
+
+            <!-- Bajo/Alto -->
+            <div class="bet-section-label">Bajo / Alto (1-18 / 19-36)</div>
+            <div class="bet-grid">
+                <div class="bet-cell other" data-bet="highlow" data-choice="low">BAJO (1-18)</div>
+                <div class="bet-cell other" data-bet="highlow" data-choice="high">ALTO (19-36)</div>
+            </div>
+
+            <!-- Docenas -->
+            <div class="bet-section-label">Docenas</div>
+            <div class="bet-grid">
+                <div class="bet-cell other" data-bet="dozen" data-choice="1">1ª DOCENA (1-12)</div>
+                <div class="bet-cell other" data-bet="dozen" data-choice="2">2ª DOCENA (13-24)</div>
+                <div class="bet-cell other" data-bet="dozen" data-choice="3">3ª DOCENA (25-36)</div>
+            </div>
+
+            <!-- Columnas -->
+            <div class="bet-section-label">Columnas</div>
+            <div class="bet-grid">
+                <div class="bet-cell other" data-bet="column" data-choice="1">COL 1</div>
+                <div class="bet-cell other" data-bet="column" data-choice="2">COL 2</div>
+                <div class="bet-cell other" data-bet="column" data-choice="3">COL 3</div>
+            </div>
+
+            <!-- Resultado -->
+            <div id="result" class="result">Haz clic en un número o en una opción para apostar. Pulsa GIRAR para comenzar.</div>
+
+            <!-- Controles -->
+            <div class="controls" style="margin-top: 2rem;">
+                <button id="spinBtn">GIRAR</button>
+                <button id="clearBets">BORRAR APUESTAS</button>
+            </div>
         </section>
     </main>
 
     <footer>
-        <p>Proyecto de ejemplo — Derechos reservados</p>
+        <p>Ruleta Europea - Pagos: Número 35:1 | Docena 2:1 | Color/Par/Impar/Bajo-Alto 1:1 | Columna 2:1</p>
     </footer>
 
-    <div class="shape shape--1" aria-hidden="true"></div>
-    <div class="shape shape--2" aria-hidden="true"></div>
-    <div class="shape shape--3" aria-hidden="true"></div>
+    <div class="shape shape--1"></div>
+    <div class="shape shape--2"></div>
+    <div class="shape shape--3"></div>
 
     <script>
     (function(){
-        // European wheel sequence (0 then following pockets clockwise)
         const wheelNumbers = [0,32,15,19,4,21,2,25,17,34,6,27,13,36,11,30,8,23,10,5,24,16,33,1,20,14,31,9,22,18,29,7,28,12,35,3,26];
         const N = wheelNumbers.length;
+        const sectorAngle = 360 / N;
+
         const wheel = document.getElementById('wheel');
+        const wheelInner = document.getElementById('wheelInner');
+        const ball = document.getElementById('ball');
         const spinBtn = document.getElementById('spinBtn');
-        const addBetBtn = document.getElementById('addBet');
         const clearBetsBtn = document.getElementById('clearBets');
         const resultEl = document.getElementById('result');
-        const betAmount = document.getElementById('betAmount');
-        const betType = document.getElementById('betType');
-        const choiceInput = document.getElementById('choiceInput');
+        const stakeInput = document.getElementById('stakeAmount');
         const balanceEl = document.getElementById('balance');
-        const betsListEl = document.getElementById('betsList');
-        const betTableEl = document.getElementById('betTable');
-        const totalStakeEl = document.getElementById('totalStake');
+        const numbersGrid = document.getElementById('numbersGrid');
 
-        const sectorAngle = 360 / N;
         let balance = 1000;
         let bets = [];
+        let isSpinning = false;
 
-        // Determine colors by wheel order: 0 is green, then alternate red/black
-        const colors = [];
-        for(let i=0;i<N;i++){
+        // Determine colors: 0 is green, then alternating red/black
+        const numberColor = {};
+        const reds = [1,3,5,7,9,12,14,16,18,19,21,23,25,27,30,32,34,36];
+        for(let i = 0; i <= 36; i++){
+            if(i === 0) numberColor[i] = 'green';
+            else numberColor[i] = reds.includes(i) ? 'red' : 'black';
+        }
+
+        // Build wheel with conic gradient
+        const gradientStops = [];
+        for(let i = 0; i < N; i++){
             const num = wheelNumbers[i];
-            if(num === 0) colors.push('green');
-            else colors.push((colors.length && colors[colors.length-1] === 'red') ? 'black' : 'red');
+            const color = numberColor[num] === 'red' ? '#c62828' : (numberColor[num] === 'green' ? '#1b5e20' : '#111');
+            const start = i * sectorAngle;
+            const end = (i + 1) * sectorAngle;
+            gradientStops.push(`${color} ${start}deg ${end}deg`);
         }
+        wheelInner.style.background = `conic-gradient(${gradientStops.join(',')})`;
 
-        // build wheel segments using wheelNumbers order
-        const gradientParts = [];
-        for(let i=0;i<N;i++){
-            const col = (colors[i] === 'green') ? '#1b5e20' : (colors[i] === 'red' ? '#c62828' : '#111');
-            const start = i*sectorAngle;
-            const end = (i+1)*sectorAngle;
-            gradientParts.push(`${col} ${start}deg ${end}deg`);
-        }
-        wheel.style.background = `conic-gradient(${gradientParts.join(',')})`;
-
-        // labels (numbers) positioned according to wheel ordering
-        for(let i=0;i<N;i++){
-            const label = document.createElement('span');
+        // Add numbers to wheel
+        wheelNumbers.forEach((num, idx) => {
+            const label = document.createElement('div');
             label.className = 'wheel-label';
-            label.dataset.pos = i;
-            const angle = i*sectorAngle + sectorAngle/2;
-            label.textContent = wheelNumbers[i];
-            label.style.transform = `rotate(${angle}deg) translateY(-45%) rotate(${-angle}deg)`;
-            label.title = `Número ${wheelNumbers[i]}`;
-            label.addEventListener('click', ()=>{
-                // quick add number bet
-                choiceInput.value = String(wheelNumbers[i]);
-                betType.value = 'number';
-            });
-            wheel.appendChild(label);
-        }
-
-        // build bet table (visual grid for quick clicks)
-        function buildBetTable(){
-            betTableEl.innerHTML = '';
-            // show 0 separately then grid 1..36
-            const zeroCell = document.createElement('div');
-            zeroCell.className = 'bet-cell green';
-            zeroCell.textContent = '0';
-            zeroCell.addEventListener('click', ()=>{ addQuickBet('number','0'); });
-            betTableEl.appendChild(zeroCell);
-
-            for(let i=1;i<=36;i++){
-                // find position and color from wheelNumbers
-                const pos = wheelNumbers.indexOf(i);
-                const col = colors[pos] === 'red' ? 'red' : 'black';
-                const c = document.createElement('div');
-                c.className = `bet-cell ${col}`;
-                c.textContent = String(i);
-                c.addEventListener('click', ()=>{ addQuickBet('number', String(i)); });
-                betTableEl.appendChild(c);
-            }
-        }
-        buildBetTable();
-
-        function refreshBetsUI(){
-            betsListEl.innerHTML = '';
-            let total = 0;
-            bets.forEach((b, idx)=>{
-                const item = document.createElement('div'); item.className = 'bet-item';
-                item.innerHTML = `<div>${b.type}: <strong>${b.choice}</strong></div><div>${b.amount} €</div>`;
-                const rem = document.createElement('button'); rem.textContent='X'; rem.className='btn-danger'; rem.style.padding='4px 6px'; rem.addEventListener('click', ()=>{ bets.splice(idx,1); refreshBetsUI(); });
-                item.appendChild(rem);
-                betsListEl.appendChild(item);
-                total += b.amount;
-            });
-            totalStakeEl.textContent = total.toFixed(2);
-        }
-
-        addBetBtn.addEventListener('click', ()=>{
-            const amt = Number(betAmount.value) || 0;
-            if(amt <= 0){ alert('Introduce una cantidad válida'); return; }
-            const type = betType.value;
-            const choice = choiceInput.value.trim();
-            if(type === 'number'){
-                const n = Number(choice);
-                if(Number.isNaN(n) || n < 0 || n > 36){ alert('Número entre 0 y 36'); return; }
-            }
-            bets.push({type, choice, amount: amt});
-            refreshBetsUI();
+            const angle = idx * sectorAngle + sectorAngle / 2;
+            const rad = (angle * Math.PI) / 180;
+            const radius = 190;
+            const x = Math.cos(rad) * radius;
+            const y = Math.sin(rad) * radius;
+            label.textContent = num;
+            label.style.left = `calc(50% + ${x}px)`;
+            label.style.top = `calc(50% + ${y}px)`;
+            label.style.transform = 'translate(-50%, -50%)';
+            wheelInner.appendChild(label);
         });
 
-        // quick add by clicking numbers: use current stake amount
-        function addQuickBet(type, choice){
-            const amt = Number(betAmount.value) || 0;
-            if(amt <= 0){ alert('Introduce una cantidad válida'); return; }
-            bets.push({type, choice, amount: amt});
-            refreshBetsUI();
+        // Build numbers grid
+        for(let i = 0; i <= 36; i++){
+            const cell = document.createElement('div');
+            cell.className = `bet-cell number`;
+            if(numberColor[i] === 'red') cell.classList.add('red');
+            else if(numberColor[i] === 'black') cell.classList.add('black');
+            else cell.classList.add('green');
+            cell.textContent = i;
+            cell.dataset.bet = 'number';
+            cell.dataset.choice = String(i);
+            numbersGrid.appendChild(cell);
         }
 
-        clearBetsBtn.addEventListener('click', ()=>{ bets = []; refreshBetsUI(); });
+        // Click handlers for all bet cells
+        document.querySelectorAll('.bet-cell').forEach(cell => {
+            cell.addEventListener('click', () => {
+                if(isSpinning) return;
+                const betType = cell.dataset.bet;
+                const choice = cell.dataset.choice;
+                const stake = Number(stakeInput.value) || 0;
+                if(stake <= 0){ alert('Introduce una cantidad válida'); return; }
+                bets.push({type: betType, choice, amount: stake});
+                updateBetsDisplay();
+            });
+        });
 
-        function setRotation(deg, duration=6000){
-            wheel.style.transition = `transform ${duration}ms cubic-bezier(0.15, 0.9, 0.25, 1)`;
-            wheel.style.transform = `rotate(${deg}deg)`;
+        function updateBetsDisplay(){
+            const total = bets.reduce((s, b) => s + b.amount, 0);
+            resultEl.textContent = `Apuestas activas: ${bets.length} | Total: ${total} €`;
         }
 
-        function getWinnerPositionFromFinal(finalDeg){
-            const r = ((360 - (finalDeg % 360)) % 360);
-            return Math.floor((r + 0.0001) / sectorAngle) % N;
+        clearBetsBtn.addEventListener('click', () => {
+            bets = [];
+            updateBetsDisplay();
+        });
+
+        function spin(){
+            if(isSpinning || bets.length === 0){ alert('Añade al menos una apuesta'); return; }
+            const totalStake = bets.reduce((s, b) => s + b.amount, 0);
+            if(totalStake > balance){ alert('Saldo insuficiente'); return; }
+
+            isSpinning = true;
+            spinBtn.disabled = true;
+            clearBetsBtn.disabled = true;
+            balance -= totalStake;
+            balanceEl.textContent = balance;
+            resultEl.textContent = 'Girando...';
+
+            const winnerIdx = Math.floor(Math.random() * N);
+            const winnerNumber = wheelNumbers[winnerIdx];
+            const spins = 5 + Math.floor(Math.random() * 4);
+            const finalRotation = spins * 360 + winnerIdx * sectorAngle + sectorAngle / 2;
+
+            // Animate wheel
+            wheelInner.style.transition = 'transform 6s cubic-bezier(0.25, 0.46, 0.45, 0.94)';
+            wheelInner.style.transform = `rotate(${finalRotation}deg)`;
+
+            // Animate ball opposite direction
+            const ballSpins = spins * 8 + Math.floor(Math.random() * 6);
+            ball.style.transition = 'transform 5.8s cubic-bezier(0.25, 0.46, 0.45, 0.94)';
+            ball.style.transform = `rotate(${-(ballSpins * 360)}deg) translateY(-230px) rotate(${ballSpins * 360}deg)`;
+
+            setTimeout(() => {
+                wheelInner.style.transition = '';
+                ball.style.transition = '';
+
+                // Evaluate bets
+                let totalWin = 0;
+                let messages = [];
+                bets.forEach(bet => {
+                    const payout = calculatePayout(winnerNumber, bet);
+                    if(payout > 0){
+                        totalWin += payout;
+                        messages.push(`✓ ${bet.type}: ${bet.choice} → +${payout} €`);
+                    } else {
+                        messages.push(`✗ ${bet.type}: ${bet.choice} → -${bet.amount} €`);
+                    }
+                });
+
+                balance += totalWin;
+                balanceEl.textContent = balance;
+                resultEl.innerHTML = `<strong>Número ganador: ${winnerNumber}</strong><br>` + messages.join('<br>');
+
+                if(totalWin > 0) createConfetti();
+
+                bets = [];
+                isSpinning = false;
+                spinBtn.disabled = false;
+                clearBetsBtn.disabled = false;
+            }, 6200);
         }
 
-        function randomInt(max){ return Math.floor(Math.random()*max); }
+        function calculatePayout(winner, bet){
+            const n = Number(winner);
+            let won = false;
 
-        function payoutForBet(winnerNumber, bet){
-            const res = {won:false, net:0};
-            const n = Number(winnerNumber);
             switch(bet.type){
                 case 'number':
-                    if(Number(bet.choice) === n){ res.won = true; res.net = bet.amount * 35; }
-                    break;
+                    won = (Number(bet.choice) === n);
+                    return won ? bet.amount * 35 : 0;
                 case 'color':
-                    // identify color of winner
-                    const pos = wheelNumbers.indexOf(n);
-                    const winColor = (n===0)?'green':colors[pos];
-                    if(bet.choice.toLowerCase() === winColor) { res.won = true; res.net = bet.amount * 1; }
-                    break;
+                    won = (numberColor[n] === bet.choice);
+                    return won ? bet.amount : 0;
                 case 'parity':
-                    if(n !== 0){
-                        if(bet.choice.toLowerCase()==='par' && n%2===0){ res.won=true; res.net = bet.amount *1; }
-                        if(bet.choice.toLowerCase()==='impar' && n%2===1){ res.won=true; res.net = bet.amount *1; }
-                    }
-                    break;
+                    if(n === 0) return 0;
+                    won = ((bet.choice === 'even' && n % 2 === 0) || (bet.choice === 'odd' && n % 2 === 1));
+                    return won ? bet.amount : 0;
                 case 'highlow':
-                    if(n !== 0){
-                        if(bet.choice.toLowerCase()==='alto' && n>=19 && n<=36){ res.won=true; res.net = bet.amount *1; }
-                        if(bet.choice.toLowerCase()==='bajo' && n>=1 && n<=18){ res.won=true; res.net = bet.amount *1; }
-                    }
-                    break;
+                    if(n === 0) return 0;
+                    won = ((bet.choice === 'low' && n <= 18) || (bet.choice === 'high' && n >= 19));
+                    return won ? bet.amount : 0;
                 case 'dozen':
-                    if(n !== 0){
-                        if(bet.choice==='1' && n>=1 && n<=12){ res.won=true; res.net = bet.amount *2; }
-                        if(bet.choice==='2' && n>=13 && n<=24){ res.won=true; res.net = bet.amount *2; }
-                        if(bet.choice==='3' && n>=25 && n<=36){ res.won=true; res.net = bet.amount *2; }
-                    }
-                    break;
+                    if(n === 0) return 0;
+                    const dozen = bet.choice;
+                    won = ((dozen === '1' && n <= 12) || (dozen === '2' && n >= 13 && n <= 24) || (dozen === '3' && n >= 25));
+                    return won ? bet.amount * 2 : 0;
+                case 'column':
+                    if(n === 0) return 0;
+                    const col = Number(bet.choice);
+                    won = (n % 3 === (col % 3));
+                    return won ? bet.amount * 2 : 0;
             }
-            return res;
+            return 0;
         }
 
         function createConfetti(){
-            const count = 40;
-            for(let i=0;i<count;i++){
-                const d = document.createElement('div');
-                d.className = 'confetti-piece';
-                d.style.background = (i%2===0)?'#ffd36b':'#6bffb3';
-                d.style.left = (window.innerWidth/2 + (randomInt(400)-200)) + 'px';
-                d.style.top = (window.innerHeight/4) + 'px';
-                document.body.appendChild(d);
-                requestAnimationFrame(()=>{
-                    const tx = (randomInt(800)-400);
-                    const ty = (randomInt(600)+200);
-                    const rot = randomInt(720);
-                    d.style.transition = 'transform 1400ms ease-out, opacity 1400ms ease-out';
-                    d.style.transform = `translate(${tx}px, ${ty}px) rotate(${rot}deg)`;
-                    d.style.opacity = '0';
-                });
-                setTimeout(()=> d.remove(), 1600);
+            for(let i = 0; i < 50; i++){
+                const conf = document.createElement('div');
+                conf.className = 'confetti';
+                conf.style.left = Math.random() * window.innerWidth + 'px';
+                conf.style.top = '-10px';
+                conf.style.width = '10px';
+                conf.style.height = '10px';
+                conf.style.background = ['#ffd36b', '#2ecc71', '#e74c3c'][Math.floor(Math.random() * 3)];
+                document.body.appendChild(conf);
+
+                const duration = 2 + Math.random() * 1;
+                const tx = (Math.random() - 0.5) * 400;
+                const ty = window.innerHeight + 20;
+                conf.style.animation = `fall ${duration}s linear forwards`;
+                conf.style.setProperty('--tx', tx + 'px');
+                conf.style.setProperty('--ty', ty + 'px');
+
+                setTimeout(() => conf.remove(), duration * 1000);
             }
-        }
-
-        function spin(){
-            if(bets.length === 0){ alert('Añade al menos una apuesta antes de girar'); return; }
-            const totalStake = bets.reduce((s,b)=> s + b.amount, 0);
-            if(totalStake > balance){ alert('Saldo insuficiente'); return; }
-            // deduct stakes
-            balance -= totalStake;
-            balanceEl.textContent = balance.toFixed(2);
-
-            spinBtn.disabled = true; addBetBtn.disabled = true; clearBetsBtn.disabled = true;
-            resultEl.textContent = 'Girando...';
-
-            const winnerPos = randomInt(N);
-            const spins = 5 + randomInt(4);
-            const finalDeg = spins*360 + winnerPos*sectorAngle + sectorAngle/2;
-            // animate wheel
-            setRotation(finalDeg, 6000);
-            // animate ball in opposite direction: more spins and slightly shorter duration
-            const ball = document.getElementById('ball');
-            if(ball){
-                const spinsBall = spins*8 + randomInt(6) + 6;
-                const finalBallDeg = -(spinsBall*360 + randomInt(360));
-                const durationBall = 5200;
-                setBallRotation(finalBallDeg, durationBall);
-            }
-
-            const onEnd = ()=>{
-                wheel.style.transition = '';
-                const landedPos = getWinnerPositionFromFinal(finalDeg);
-                const winnerNumber = wheelNumbers[landedPos];
-
-                // highlight winner
-                wheel.querySelectorAll('.wheel-label').forEach(l=> l.classList.remove('winner'));
-                const winnerLabel = wheel.querySelector(`.wheel-label[data-pos='${landedPos}']`);
-                if(winnerLabel) winnerLabel.classList.add('winner');
-
-                // evaluate bets
-                let messageParts = [];
-                let anyWin = false;
-                bets.forEach(b=>{
-                    const p = payoutForBet(winnerNumber, b);
-                    if(p.won){ anyWin = true; balance += b.amount + p.net; messageParts.push(`Ganaste ${p.net} € en ${b.type} (${b.choice})`); }
-                    else { messageParts.push(`Perdiste ${b.amount} € en ${b.type} (${b.choice})`); }
-                });
-                resultEl.textContent = `Resultado: ${winnerNumber}. ` + messageParts.join(' — ');
-                totalStakeEl.textContent = '0';
-                bets = []; refreshBetsUI();
-                balanceEl.textContent = balance.toFixed(2);
-
-                if(anyWin) createConfetti();
-
-                spinBtn.disabled = false; addBetBtn.disabled = false; clearBetsBtn.disabled = false;
-                wheel.removeEventListener('transitionend', onEnd);
-            };
-            wheel.addEventListener('transitionend', onEnd);
-        }
-
-        function setBallRotation(deg, duration=6000){
-            const ball = document.getElementById('ball');
-            if(!ball) return;
-            // position the ball along circle using rotate(angle) translateY(-r)
-            const r = 'calc(50% - 36px)';
-            ball.style.transition = `transform ${duration}ms cubic-bezier(0.2,0.8,0.2,1)`;
-            // the ball transform includes a counter-rotation so the ball faces natural orientation
-            ball.style.transform = `rotate(${deg}deg) translateY(-${r}) rotate(${-deg}deg)`;
-        }
-
-        function getWinnerPositionFromFinal(finalDeg){
-            return Math.floor(((360 - (finalDeg % 360)) % 360 + 0.0001) / sectorAngle) % N;
         }
 
         spinBtn.addEventListener('click', spin);
+        updateBetsDisplay();
+        balanceEl.textContent = balance;
 
-        // init UI
-        refreshBetsUI();
-        balanceEl.textContent = balance.toFixed(2);
-        resultEl.textContent = 'Listo — añade apuestas y pulsa Girar.';
-
+        // Add fall animation to stylesheet
+        const style = document.createElement('style');
+        style.textContent = `
+            @keyframes fall {
+                to { transform: translateY(var(--ty)) translateX(var(--tx)) rotate(720deg); opacity: 0; }
+            }
+        `;
+        document.head.appendChild(style);
     })();
     </script>
 </body>

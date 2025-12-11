@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Ruleta Europea</title>
     <link rel="stylesheet" href="reset.css">
-    <link rel="stylesheet" href="style_new.css">
+    <link rel="stylesheet" href="style.css">
 </head>
 <body>
     <header>
@@ -139,7 +139,7 @@
             label.className = 'wheel-label';
             const angle = idx * sectorAngle + sectorAngle / 2;
             const rad = (angle * Math.PI) / 180;
-            const radius = 190;
+            const radius = 210;
             const x = Math.cos(rad) * radius;
             const y = Math.sin(rad) * radius;
             label.textContent = num;

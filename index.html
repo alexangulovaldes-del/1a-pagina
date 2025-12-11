@@ -3,23 +3,224 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Ruleta — Juego</title>
-    <link rel="stylesheet" href="style.css">
+    <title>Ruleta</title>
     <link rel="stylesheet" href="reset.css">
+    <link rel="stylesheet" href="style.css">
 </head>
 <body>
     <header>
-        <h1>Ruleta Mágica</h1>
+        <h1>🎰 Ruleta Europea</h1>
     </header>
 
     <main>
-        <section class="game">
-            <div class="roulette-area">
-                <div id="wheel" class="wheel" aria-hidden="true">
-                    <div id="ball" class="ball" aria-hidden="true"></div>
-                </div>
-                <div class="marker" aria-hidden="true">▼</div>
+        <!-- Ruleta -->
+        <div class="roulette-area">
+            <div class="marker">▼</div>
+            <div id="wheel" class="wheel">
+                <div id="ball" class="ball"></div>
             </div>
+        </div>
+
+        <!-- Tablero de apuestas (0-36) -->
+        <div class="bet-table" id="betTable"></div>
+
+        <!-- Controles y saldo -->
+        <div class="controls">
+            <div class="balance">Saldo: <span id="balance">1000</span> €</div>
+            <input id="betAmount" type="number" min="1" value="10" placeholder="Cantidad apuesta">
+            <button id="spinBtn" class="btn btn-primary">GIRAR RULETA</button>
+            <button id="clearBets" class="btn btn-danger">Limpiar apuestas</button>
+        </div>
+
+        <!-- Resultado -->
+        <div class="result" id="result">Haz clic en un número y pulsa GIRAR</div>
+    </main>
+
+    <footer>
+        <p>Ruleta Europea (0-36) | Payouts: Número 35:1 | Color/Par/Impar/Alto-Bajo 1:1 | Docena 2:1</p>
+    </footer>
+
+    <div class="shape shape--1" aria-hidden="true"></div>
+    <div class="shape shape--2" aria-hidden="true"></div>
+    <div class="shape shape--3" aria-hidden="true"></div>
+
+    <script>
+    (function(){
+        const wheelNumbers = [0,32,15,19,4,21,2,25,17,34,6,27,13,36,11,30,8,23,10,5,24,16,33,1,20,14,31,9,22,18,29,7,28,12,35,3,26];
+        const N = wheelNumbers.length;
+        const wheel = document.getElementById('wheel');
+        const spinBtn = document.getElementById('spinBtn');
+        const clearBetsBtn = document.getElementById('clearBets');
+        const resultEl = document.getElementById('result');
+        const betAmount = document.getElementById('betAmount');
+        const balanceEl = document.getElementById('balance');
+        const betTableEl = document.getElementById('betTable');
+
+        const sectorAngle = 360 / N;
+        let balance = 1000;
+        let selectedNumber = null;
+
+        // Colores: 0=verde, resto rojo/negro alternando
+        const colors = [];
+        for(let i=0;i<N;i++){
+            const num = wheelNumbers[i];
+            if(num === 0) colors.push('green');
+            else colors.push((colors.length && colors[colors.length-1] === 'red') ? 'black' : 'red');
+        }
+
+        // Construir gradiente de la ruleta
+        const gradientParts = [];
+        for(let i=0;i<N;i++){
+            const col = (colors[i] === 'green') ? '#2ecc71' : (colors[i] === 'red' ? '#ff3333' : '#222');
+            const start = i*sectorAngle;
+            const end = (i+1)*sectorAngle;
+            gradientParts.push(`${col} ${start}deg ${end}deg`);
+        }
+        wheel.style.background = `conic-gradient(${gradientParts.join(',')})`;
+
+        // Añadir números alrededor de la ruleta
+        for(let i=0;i<N;i++){
+            const label = document.createElement('span');
+            label.className = 'wheel-label';
+            label.dataset.pos = i;
+            const angle = i*sectorAngle + sectorAngle/2;
+            label.textContent = wheelNumbers[i];
+            label.style.transform = `rotate(${angle}deg) translateY(-45%) rotate(${-angle}deg)`;
+            wheel.appendChild(label);
+        }
+
+        // Construir tabla de apuestas (0-36)
+        function buildBetTable(){
+            betTableEl.innerHTML = '';
+            const zeroCell = document.createElement('div');
+            zeroCell.className = 'bet-cell green';
+            zeroCell.textContent = '0';
+            zeroCell.addEventListener('click', ()=> selectNumber(0));
+            betTableEl.appendChild(zeroCell);
+
+            for(let i=1;i<=36;i++){
+                const pos = wheelNumbers.indexOf(i);
+                const col = colors[pos] === 'red' ? 'red' : 'black';
+                const c = document.createElement('div');
+                c.className = `bet-cell ${col}`;
+                c.textContent = String(i);
+                c.addEventListener('click', ()=> selectNumber(i));
+                betTableEl.appendChild(c);
+            }
+        }
+        buildBetTable();
+
+        function selectNumber(num){
+            // Limpiar selección anterior
+            document.querySelectorAll('.bet-cell.selected').forEach(el=> el.classList.remove('selected'));
+            // Seleccionar nuevo
+            document.querySelectorAll('.bet-cell').forEach(el=> {
+                if(el.textContent === String(num)) el.classList.add('selected');
+            });
+            selectedNumber = num;
+        }
+
+        function setRotation(deg, duration=6000){
+            wheel.style.transition = `transform ${duration}ms cubic-bezier(0.2, 0.8, 0.2, 1)`;
+            wheel.style.transform = `rotate(${deg}deg)`;
+        }
+
+        function getWinnerFromFinal(finalDeg){
+            const r = ((360 - (finalDeg % 360)) % 360);
+            return Math.floor((r + 0.0001) / sectorAngle) % N;
+        }
+
+        function randomInt(max){ return Math.floor(Math.random()*max); }
+
+        function createConfetti(){
+            const count = 50;
+            for(let i=0;i<count;i++){
+                const d = document.createElement('div');
+                d.className = 'confetti-piece';
+                d.style.background = (i%3===0)?'#ffd36b':(i%3===1?'#ff3333':'#2ecc71');
+                d.style.left = (window.innerWidth/2 + (randomInt(600)-300)) + 'px';
+                d.style.top = (window.innerHeight/4) + 'px';
+                document.body.appendChild(d);
+                requestAnimationFrame(()=>{
+                    const tx = (randomInt(1000)-500);
+                    const ty = (randomInt(800)+300);
+                    const rot = randomInt(720);
+                    d.style.transition = 'transform 1600ms ease-out, opacity 1600ms ease-out';
+                    d.style.transform = `translate(${tx}px, ${ty}px) rotate(${rot}deg)`;
+                    d.style.opacity = '0';
+                });
+                setTimeout(()=> d.remove(), 1700);
+            }
+        }
+
+        function spin(){
+            if(selectedNumber === null){ alert('Selecciona un número antes de girar'); return; }
+            const bet = Number(betAmount.value) || 0;
+            if(bet <= 0){ alert('Introduce una cantidad válida'); return; }
+            if(bet > balance){ alert('Saldo insuficiente'); return; }
+
+            spinBtn.disabled = true;
+            clearBetsBtn.disabled = true;
+            resultEl.textContent = 'Girando...';
+
+            // Deducir apuesta
+            balance -= bet;
+            balanceEl.textContent = balance.toFixed(2);
+
+            const winnerPos = randomInt(N);
+            const spins = 5 + randomInt(4);
+            const finalDeg = spins*360 + winnerPos*sectorAngle + sectorAngle/2;
+            setRotation(finalDeg, 6000);
+
+            const onEnd = ()=>{
+                wheel.style.transition = '';
+                const landedPos = getWinnerFromFinal(finalDeg);
+                const winnerNumber = wheelNumbers[landedPos];
+
+                // Resaltar número ganador
+                document.querySelectorAll('.bet-cell.winner').forEach(el=> el.classList.remove('winner'));
+                document.querySelectorAll('.bet-cell').forEach(el=> {
+                    if(el.textContent === String(winnerNumber)) el.classList.add('winner');
+                });
+
+                // Evaluar resultado
+                let message = `Resultado: ${winnerNumber}`;
+                let won = false;
+                if(selectedNumber === winnerNumber){
+                    const payout = bet * 35;
+                    balance += bet + payout;
+                    message += ` ¡GANASTE ${payout} €!`;
+                    won = true;
+                }else{
+                    message += ` - Perdiste ${bet} €`;
+                }
+
+                resultEl.textContent = message;
+                balanceEl.textContent = balance.toFixed(2);
+
+                if(won) createConfetti();
+
+                // Limpiar y reactivar
+                selectedNumber = null;
+                document.querySelectorAll('.bet-cell.selected').forEach(el=> el.classList.remove('selected'));
+                spinBtn.disabled = false;
+                clearBetsBtn.disabled = false;
+                wheel.removeEventListener('transitionend', onEnd);
+            };
+            wheel.addEventListener('transitionend', onEnd);
+        }
+
+        spinBtn.addEventListener('click', spin);
+        clearBetsBtn.addEventListener('click', ()=>{
+            selectedNumber = null;
+            document.querySelectorAll('.bet-cell.selected').forEach(el=> el.classList.remove('selected'));
+        });
+
+        balanceEl.textContent = balance.toFixed(2);
+    })();
+    </script>
+</body>
+</html>
 
             <aside class="controls" aria-label="Panel de apuestas">
                 <div class="balance">Saldo: <span id="balance">1000</span> €</div>

@@ -1,0 +1,98 @@
+/* * 1. Uso de box-sizing: border-box para todos los elementos, 
+ * incluyendo pseudo-elementos. Esto facilita el cálculo de 
+ * tamaños (ancho y alto incluirán padding y border).
+ */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+/* * 2. Reinicio para eliminar márgenes predeterminados. 
+ * Aplica a la mayoría de los elementos de flujo de bloque.
+ */
+body,
+h1, h2, h3, h4, h5, h6,
+p,
+figure,
+blockquote,
+dl,
+dd {
+  margin: 0;
+}
+
+/* * 3. Establece el tamaño de fuente base a 100% para la accesibilidad 
+ * (permite al usuario escalar el texto) y un 'line-height' para 
+ * una mejor legibilidad.
+ */
+body {
+  min-height: 100vh; /* Asegura que el cuerpo ocupe al menos toda la ventana */
+  line-height: 1.5; /* Altura de línea para legibilidad */
+  -webkit-font-smoothing: antialiased; /* Mejora la representación de fuentes */
+}
+
+/* * 4. Gestión de medios e incrustaciones para que sean responsivos.
+ * Esto evita desbordamientos accidentales.
+ */
+img,
+picture,
+video,
+canvas,
+svg {
+  display: block; /* Elimina el espacio debajo de las imágenes */
+  max-width: 100%; /* Las hace responsivas */
+}
+
+/* * 5. Elimina la herencia de fuente y grosor en los campos de formulario.
+ * Garantiza que los campos hereden la fuente del cuerpo.
+ */
+input,
+button,
+textarea,
+select {
+  font: inherit;
+}
+
+/* * 6. Elimina las animaciones y transiciones si el usuario ha 
+ * habilitado la preferencia de 'reducir movimiento'.
+ */
+@media (prefers-reduced-motion: reduce) {
+  html:focus-within {
+    scroll-behavior: auto;
+  }
+  
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* * 7. Estilos adicionales de 'reset' más agresivos (opcional)
+ */
+
+/* Elimina estilos de lista por defecto */
+ul, ol {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+/* Elimina el subrayado de los enlaces por defecto */
+a {
+  text-decoration: none;
+  color: inherit; /* Opcional: heredar el color del texto circundante */
+}
+
+/* Elimina el borde azul en los enlaces activos/enfocados en algunos navegadores */
+a:focus, button:focus {
+  outline-offset: 3px; /* Pequeño desplazamiento para el contorno de enfoque */
+}
+
+/* Asegura que el texto en negrita sea más perceptible */
+b, strong {
+  font-weight: bolder; 
+}

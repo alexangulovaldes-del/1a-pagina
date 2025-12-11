@@ -15,7 +15,9 @@
     <main>
         <section class="game">
             <div class="roulette-area">
-                <div id="wheel" class="wheel" aria-hidden="true"></div>
+                <div id="wheel" class="wheel" aria-hidden="true">
+                    <div id="ball" class="ball" aria-hidden="true"></div>
+                </div>
                 <div class="marker" aria-hidden="true">▼</div>
             </div>
 
@@ -133,7 +135,7 @@
             const zeroCell = document.createElement('div');
             zeroCell.className = 'bet-cell green';
             zeroCell.textContent = '0';
-            zeroCell.addEventListener('click', ()=>{ choiceInput.value='0'; betType.value='number'; });
+            zeroCell.addEventListener('click', ()=>{ addQuickBet('number','0'); });
             betTableEl.appendChild(zeroCell);
 
             for(let i=1;i<=36;i++){
@@ -143,7 +145,7 @@
                 const c = document.createElement('div');
                 c.className = `bet-cell ${col}`;
                 c.textContent = String(i);
-                c.addEventListener('click', ()=>{ choiceInput.value=String(i); betType.value='number'; });
+                c.addEventListener('click', ()=>{ addQuickBet('number', String(i)); });
                 betTableEl.appendChild(c);
             }
         }
@@ -175,6 +177,14 @@
             bets.push({type, choice, amount: amt});
             refreshBetsUI();
         });
+
+        // quick add by clicking numbers: use current stake amount
+        function addQuickBet(type, choice){
+            const amt = Number(betAmount.value) || 0;
+            if(amt <= 0){ alert('Introduce una cantidad válida'); return; }
+            bets.push({type, choice, amount: amt});
+            refreshBetsUI();
+        }
 
         clearBetsBtn.addEventListener('click', ()=>{ bets = []; refreshBetsUI(); });
 
@@ -261,7 +271,16 @@
             const winnerPos = randomInt(N);
             const spins = 5 + randomInt(4);
             const finalDeg = spins*360 + winnerPos*sectorAngle + sectorAngle/2;
+            // animate wheel
             setRotation(finalDeg, 6000);
+            // animate ball in opposite direction: more spins and slightly shorter duration
+            const ball = document.getElementById('ball');
+            if(ball){
+                const spinsBall = spins*8 + randomInt(6) + 6;
+                const finalBallDeg = -(spinsBall*360 + randomInt(360));
+                const durationBall = 5200;
+                setBallRotation(finalBallDeg, durationBall);
+            }
 
             const onEnd = ()=>{
                 wheel.style.transition = '';
@@ -292,6 +311,16 @@
                 wheel.removeEventListener('transitionend', onEnd);
             };
             wheel.addEventListener('transitionend', onEnd);
+        }
+
+        function setBallRotation(deg, duration=6000){
+            const ball = document.getElementById('ball');
+            if(!ball) return;
+            // position the ball along circle using rotate(angle) translateY(-r)
+            const r = 'calc(50% - 36px)';
+            ball.style.transition = `transform ${duration}ms cubic-bezier(0.2,0.8,0.2,1)`;
+            // the ball transform includes a counter-rotation so the ball faces natural orientation
+            ball.style.transform = `rotate(${deg}deg) translateY(-${r}) rotate(${-deg}deg)`;
         }
 
         function getWinnerPositionFromFinal(finalDeg){

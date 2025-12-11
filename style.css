@@ -209,6 +209,26 @@ header, main, footer {
     z-index: 5;
 }
 
+/* Ball on the rim */
+.wheel .ball {
+    position: absolute;
+    left: 50%; top: 50%;
+    width: 14px; height: 14px; border-radius: 50%;
+    transform-origin: 50% 50%;
+    z-index: 18; pointer-events: none;
+    /* ball visual */
+    background: radial-gradient(circle at 30% 30%, #fff, #ddd);
+    box-shadow: 0 6px 12px rgba(0,0,0,0.6);
+}
+
+/* pockets border ring for a subtle realistic look */
+.wheel::before {
+    content: '';
+    position: absolute; inset: 12px; border-radius: 50%;
+    box-shadow: 0 0 0 6px rgba(0,0,0,0.28) inset;
+    pointer-events: none; z-index: 2;
+}
+
 .wheel-label {
     position: absolute;
     left: 50%; top: 50%;
@@ -279,6 +299,7 @@ header, main, footer {
     padding: 10px; border-radius:6px; font-weight:700; color:#fff; cursor:pointer;
     box-shadow: inset 0 -3px 8px rgba(255,255,255,0.02);
 }
+.bet-cell:hover { transform: translateY(-4px); box-shadow: 0 8px 20px rgba(0,0,0,0.6); }
 .bet-cell.red { background: linear-gradient(180deg,#c62828,#8b0000); }
 .bet-cell.black { background: linear-gradient(180deg,#222,#000); }
 .bet-cell.green { background: linear-gradient(180deg,#1b5e20,#004d00); }

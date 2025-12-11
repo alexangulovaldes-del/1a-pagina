@@ -1,21 +1,148 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="es">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Document</title>
+    <title>Ruleta — Juego</title>
     <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" href="reset.css">
 </head>
 <body>
     <header>
-        <h1>Mi primera página</h1>
+        <h1>Ruleta Mágica</h1>
     </header>
+
     <main>
-        <p>Hola mundo</p>
+        <section class="game">
+            <div class="roulette-area">
+                <div id="wheel" class="wheel" aria-hidden="true"></div>
+                <div class="marker" aria-hidden="true">▼</div>
+            </div>
+
+            <div class="controls">
+                <label for="bet">Tu apuesta (opcional):</label>
+                <input id="bet" type="number" min="1" value="10"> 
+                <button id="spinBtn">Girar</button>
+                <button id="quickBtn">Giro rápido</button>
+            </div>
+
+            <div id="result" class="result" role="status" aria-live="polite">Pulsa "Girar" para jugar.</div>
+        </section>
+
+        <section class="instructions">
+            <h2>Cómo funciona</h2>
+            <p>La ruleta tiene 12 casillas numeradas del 1 al 12. Pulsa <strong>Girar</strong> para lanzar la ruleta. El triángulo superior indica el número ganador.</p>
+        </section>
     </main>
+
     <footer>
-        <p>Derechos reservados 2024</p>
+        <p>Proyecto de ejemplo — Derechos reservados</p>
     </footer>
+
+    <!-- Opcional: decorativas -->
+    <div class="shape shape--1" aria-hidden="true"></div>
+    <div class="shape shape--2" aria-hidden="true"></div>
+    <div class="shape shape--3" aria-hidden="true"></div>
+
+    <script>
+    (function(){
+        const N = 12; // número de sectores
+        const wheel = document.getElementById('wheel');
+        const spinBtn = document.getElementById('spinBtn');
+        const quickBtn = document.getElementById('quickBtn');
+        const resultEl = document.getElementById('result');
+        const betInput = document.getElementById('bet');
+        const sectorAngle = 360 / N;
+        let currentRotation = 0;
+
+        // Crear apariencia de la ruleta con conic-gradient
+        const colors = ['#ff6b6b','#ffd36b','#6bffb3','#6b8bff'];
+        let gradientParts = [];
+        for(let i=0;i<N;i++){
+            const color = colors[i % colors.length];
+            const start = i*sectorAngle;
+            const end = (i+1)*sectorAngle;
+            gradientParts.push(`${color} ${start}deg ${end}deg`);
+        }
+        wheel.style.background = `conic-gradient(${gradientParts.join(',')})`;
+
+        // Añadir etiquetas numéricas alrededor
+        for(let i=0;i<N;i++){
+            const label = document.createElement('span');
+            label.className = 'wheel-label';
+            const angle = i*sectorAngle + sectorAngle/2; // centro del sector
+            label.textContent = (i+1).toString();
+            label.style.transform = `rotate(${angle}deg) translateY(-160px) rotate(${ -angle }deg)`;
+            wheel.appendChild(label);
+        }
+
+        function setRotation(deg, duration=6000){
+            wheel.style.transition = `transform ${duration}ms cubic-bezier(0.15, 0.9, 0.25, 1)`;
+            wheel.style.transform = `rotate(${deg}deg)`;
+            currentRotation = deg % 360;
+        }
+
+        function finishRotation(targetSector, spins){
+            const targetAngle = targetSector * sectorAngle + sectorAngle/2;
+            // Queremos que (rotation % 360) lands in [targetAngle - sectorAngle/2, ...], así que calculamos rotación
+            const final = spins*360 + targetAngle;
+            return final;
+        }
+
+        function getRandomInt(max){ return Math.floor(Math.random()*max); }
+
+        function onResult(target, bet){
+            const number = target + 1;
+            let message = `Ha salido el número ${number}.`;
+            if(bet && bet>0){
+                // ejemplo simple: si aciertas número exacto ganas 12x, pero aquí solo mostramos apuesta simulada
+                message += ` Apostaste ${bet} — si acertaras, sería una buena victoria!`;
+            }
+            resultEl.textContent = message;
+        }
+
+        function spin(long=true){
+            spinBtn.disabled = true;
+            quickBtn.disabled = true;
+            resultEl.textContent = 'Girando...';
+            const target = getRandomInt(N);
+            const spins = long ? (4 + getRandomInt(3)) : (1 + getRandomInt(2));
+            const final = finishRotation(target, spins);
+            const duration = long ? 6000 : 1400;
+
+            // respectar prefers-reduced-motion
+            const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+            if(reduced){
+                setRotation(final, 0);
+                onResult(target, Number(betInput.value));
+                spinBtn.disabled = false;
+                quickBtn.disabled = false;
+                return;
+            }
+
+            // animar
+            setRotation(final, duration);
+
+            // cuando termine la transición
+            const handler = function(){
+                wheel.style.transition = '';
+                // normalizar currentRotation
+                currentRotation = final % 360;
+                const landed = Math.floor((currentRotation + 0.0001) / sectorAngle) % N;
+                onResult(landed, Number(betInput.value));
+                spinBtn.disabled = false;
+                quickBtn.disabled = false;
+                wheel.removeEventListener('transitionend', handler);
+            };
+            wheel.addEventListener('transitionend', handler);
+        }
+
+        spinBtn.addEventListener('click', ()=> spin(true));
+        quickBtn.addEventListener('click', ()=> spin(false));
+
+        // Inicialización accesible
+        resultEl.textContent = 'Listo — pulsa Girar para jugar.';
+    })();
+    </script>
 </body>
 </html>

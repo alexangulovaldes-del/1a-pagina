@@ -264,4 +264,39 @@ header, main, footer {
 /* small helper */
 .muted { color: rgba(230,238,248,0.7); }
 
+/* Betting table and slip */
+.bet-table {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 6px;
+    background: rgba(0,0,0,0.45);
+    padding: 10px;
+    border-radius: 8px;
+}
+
+.bet-cell {
+    display:flex; align-items:center; justify-content:center;
+    padding: 10px; border-radius:6px; font-weight:700; color:#fff; cursor:pointer;
+    box-shadow: inset 0 -3px 8px rgba(255,255,255,0.02);
+}
+.bet-cell.red { background: linear-gradient(180deg,#c62828,#8b0000); }
+.bet-cell.black { background: linear-gradient(180deg,#222,#000); }
+.bet-cell.green { background: linear-gradient(180deg,#1b5e20,#004d00); }
+.bet-cell.selected { outline: 3px solid rgba(255,255,255,0.12); transform: translateY(-2px); }
+
+.bet-slip { margin-top: 12px; background: rgba(255,255,255,0.02); padding: 10px; border-radius: 8px; }
+.bets-list { max-height: 220px; overflow:auto; display:flex; flex-direction:column; gap:6px; }
+.bet-item { display:flex; justify-content:space-between; gap:8px; padding:6px 8px; background: rgba(0,0,0,0.3); border-radius:6px; color:#fff; }
+.bet-summary { margin-top:8px; display:flex; justify-content:space-between; align-items:center; }
+.btn-danger { background: linear-gradient(180deg,#ff6b6b,#ff3b3b); color:#081229; padding:6px 10px; border-radius:8px; border:none; font-weight:700; cursor:pointer; }
+.btn-primary { background: linear-gradient(180deg,#4facfe,#00f2fe); color:#021; padding:8px 12px; border-radius:8px; border:none; font-weight:800; cursor:pointer; }
+
+/* Improve header */
+header { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:1rem 2rem; }
+header h1 { margin:0; font-size:1.6rem; letter-spacing:0.6px; }
+
+/* Footer smaller */
+footer { text-align:center; font-size:0.9rem; color:rgba(230,238,248,0.6); }
+
+
 

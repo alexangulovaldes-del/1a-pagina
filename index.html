@@ -22,42 +22,42 @@
             <aside class="controls" aria-label="Panel de apuestas">
                 <div class="balance">Saldo: <span id="balance">1000</span> €</div>
 
-                <div class="bet-options">
-                    <div class="bet-row">
-                        <label for="betAmount">Cantidad</label>
-                        <input id="betAmount" type="number" min="1" value="10">
-                    </div>
-
-                    <div class="bet-row">
-                        <label for="betType">Tipo de apuesta</label>
-                        <select id="betType">
-                            <option value="number">Número (1-12)</option>
-                            <option value="color">Color</option>
+                <div class="bet-slip">
+                    <div style="display:flex;gap:8px;margin-bottom:8px;align-items:center;">
+                        <input id="betAmount" type="number" min="1" value="10" style="flex:1;" />
+                        <select id="betType" style="width:160px;">
+                            <option value="number">Número (Straight)</option>
+                            <option value="color">Color (Rojo/Negro)</option>
                             <option value="parity">Par / Impar</option>
-                            <option value="highlow">Bajo (1-6) / Alto (7-12)</option>
-                            <option value="dozen">Docena (1-4 / 5-8 / 9-12)</option>
+                            <option value="highlow">Bajo / Alto (1-18 / 19-36)</option>
+                            <option value="dozen">Docena (1-12 / 13-24 / 25-36)</option>
                         </select>
                     </div>
 
-                    <div id="choiceArea" class="bet-row">
-                        <label for="choiceInput">Elección</label>
-                        <input id="choiceInput" placeholder="Número o elección" />
+                    <div class="bet-row" style="margin-bottom:8px;">
+                        <input id="choiceInput" placeholder="Elección (ej. 7, rojo, par, alto, 2)" style="flex:1;" />
+                        <button id="addBet" class="btn-primary" style="margin-left:8px;">Añadir apuesta</button>
                     </div>
 
-                    <div class="bet-row">
-                        <button id="spinBtn" class="small">Girar (normal)</button>
-                        <button id="quickBtn" class="small">Giro rápido</button>
+                    <div class="bet-table" id="betTable" aria-hidden="false"></div>
+
+                    <div class="bet-slip">
+                        <div class="bets-list" id="betsList"></div>
+                        <div class="bet-summary">
+                            <div>Total apuesta: <strong id="totalStake">0</strong> €</div>
+                            <div style="display:flex;gap:8px;"><button id="clearBets" class="btn-danger">Borrar</button><button id="spinBtn" class="btn-primary">Girar</button></div>
+                        </div>
                     </div>
                 </div>
 
-                <div id="result" class="result" role="status" aria-live="polite">Listo — coloca tu apuesta y pulsa Girar.</div>
-                <div class="muted">Haz clic en un número en la ruleta para seleccionarlo rápidamente.</div>
+                <div id="result" class="result" role="status" aria-live="polite">Listo — añade apuestas y pulsa Girar.</div>
+                <div class="muted" style="margin-top:8px">Haz clic en un número del recuadro o usa "Añadir apuesta".</div>
             </aside>
         </section>
 
         <section class="instructions">
             <h2>Cómo funciona</h2>
-            <p>Selecciona el tipo de apuesta, la cantidad y (si aplica) el número o la opción. La ruleta tiene 12 casillas (1–12). Los pagos son aproximados: número x12, docena x3, color/par/impar/alto-bajo x2.</p>
+            <p>Se simula una ruleta europea (0–36). Pagos estándar: <strong>Straight (número)</strong> 35:1, <strong>Docena</strong> 2:1, <strong>Color/Par/Impar/Alto-Bajo</strong> 1:1.</p>
         </section>
     </main>
 
@@ -71,198 +71,239 @@
 
     <script>
     (function(){
-        const N = 12;
+        // European wheel sequence (0 then following pockets clockwise)
+        const wheelNumbers = [0,32,15,19,4,21,2,25,17,34,6,27,13,36,11,30,8,23,10,5,24,16,33,1,20,14,31,9,22,18,29,7,28,12,35,3,26];
+        const N = wheelNumbers.length;
         const wheel = document.getElementById('wheel');
         const spinBtn = document.getElementById('spinBtn');
-        const quickBtn = document.getElementById('quickBtn');
+        const addBetBtn = document.getElementById('addBet');
+        const clearBetsBtn = document.getElementById('clearBets');
         const resultEl = document.getElementById('result');
         const betAmount = document.getElementById('betAmount');
         const betType = document.getElementById('betType');
         const choiceInput = document.getElementById('choiceInput');
         const balanceEl = document.getElementById('balance');
+        const betsListEl = document.getElementById('betsList');
+        const betTableEl = document.getElementById('betTable');
+        const totalStakeEl = document.getElementById('totalStake');
 
         const sectorAngle = 360 / N;
         let balance = 1000;
+        let bets = [];
 
-        const colors = ['#ff6b6b','#ffd36b','#6bffb3','#6b8bff'];
-        const colorNames = ['Rojo','Amarillo','Verde','Azul'];
+        // Determine colors by wheel order: 0 is green, then alternate red/black
+        const colors = [];
+        for(let i=0;i<N;i++){
+            const num = wheelNumbers[i];
+            if(num === 0) colors.push('green');
+            else colors.push((colors.length && colors[colors.length-1] === 'red') ? 'black' : 'red');
+        }
 
-        // build wheel gradient
+        // build wheel segments using wheelNumbers order
         const gradientParts = [];
         for(let i=0;i<N;i++){
-            const color = colors[i % colors.length];
+            const col = (colors[i] === 'green') ? '#1b5e20' : (colors[i] === 'red' ? '#c62828' : '#111');
             const start = i*sectorAngle;
             const end = (i+1)*sectorAngle;
-            gradientParts.push(`${color} ${start}deg ${end}deg`);
+            gradientParts.push(`${col} ${start}deg ${end}deg`);
         }
         wheel.style.background = `conic-gradient(${gradientParts.join(',')})`;
 
-        // add labels with data-index
+        // labels (numbers) positioned according to wheel ordering
         for(let i=0;i<N;i++){
             const label = document.createElement('span');
             label.className = 'wheel-label';
-            label.dataset.index = i;
+            label.dataset.pos = i;
             const angle = i*sectorAngle + sectorAngle/2;
-            label.textContent = (i+1).toString();
+            label.textContent = wheelNumbers[i];
             label.style.transform = `rotate(${angle}deg) translateY(-45%) rotate(${-angle}deg)`;
-            label.title = `Número ${i+1} — ${colorNames[i % colorNames.length]}`;
+            label.title = `Número ${wheelNumbers[i]}`;
             label.addEventListener('click', ()=>{
-                // select number for quick betting
-                clearSelectedLabels();
-                label.classList.add('selected');
-                choiceInput.value = (i+1).toString();
+                // quick add number bet
+                choiceInput.value = String(wheelNumbers[i]);
                 betType.value = 'number';
             });
             wheel.appendChild(label);
         }
 
-        function clearSelectedLabels(){
-            wheel.querySelectorAll('.wheel-label.selected, .wheel-label.winner').forEach(el=> el.classList.remove('selected','winner'));
+        // build bet table (visual grid for quick clicks)
+        function buildBetTable(){
+            betTableEl.innerHTML = '';
+            // show 0 separately then grid 1..36
+            const zeroCell = document.createElement('div');
+            zeroCell.className = 'bet-cell green';
+            zeroCell.textContent = '0';
+            zeroCell.addEventListener('click', ()=>{ choiceInput.value='0'; betType.value='number'; });
+            betTableEl.appendChild(zeroCell);
+
+            for(let i=1;i<=36;i++){
+                // find position and color from wheelNumbers
+                const pos = wheelNumbers.indexOf(i);
+                const col = colors[pos] === 'red' ? 'red' : 'black';
+                const c = document.createElement('div');
+                c.className = `bet-cell ${col}`;
+                c.textContent = String(i);
+                c.addEventListener('click', ()=>{ choiceInput.value=String(i); betType.value='number'; });
+                betTableEl.appendChild(c);
+            }
         }
+        buildBetTable();
+
+        function refreshBetsUI(){
+            betsListEl.innerHTML = '';
+            let total = 0;
+            bets.forEach((b, idx)=>{
+                const item = document.createElement('div'); item.className = 'bet-item';
+                item.innerHTML = `<div>${b.type}: <strong>${b.choice}</strong></div><div>${b.amount} €</div>`;
+                const rem = document.createElement('button'); rem.textContent='X'; rem.className='btn-danger'; rem.style.padding='4px 6px'; rem.addEventListener('click', ()=>{ bets.splice(idx,1); refreshBetsUI(); });
+                item.appendChild(rem);
+                betsListEl.appendChild(item);
+                total += b.amount;
+            });
+            totalStakeEl.textContent = total.toFixed(2);
+        }
+
+        addBetBtn.addEventListener('click', ()=>{
+            const amt = Number(betAmount.value) || 0;
+            if(amt <= 0){ alert('Introduce una cantidad válida'); return; }
+            const type = betType.value;
+            const choice = choiceInput.value.trim();
+            if(type === 'number'){
+                const n = Number(choice);
+                if(Number.isNaN(n) || n < 0 || n > 36){ alert('Número entre 0 y 36'); return; }
+            }
+            bets.push({type, choice, amount: amt});
+            refreshBetsUI();
+        });
+
+        clearBetsBtn.addEventListener('click', ()=>{ bets = []; refreshBetsUI(); });
 
         function setRotation(deg, duration=6000){
             wheel.style.transition = `transform ${duration}ms cubic-bezier(0.15, 0.9, 0.25, 1)`;
             wheel.style.transform = `rotate(${deg}deg)`;
         }
 
-        function getLandedIndex(finalDeg){
-            // Convert final rotation to the sector at the top marker
+        function getWinnerPositionFromFinal(finalDeg){
             const r = ((360 - (finalDeg % 360)) % 360);
             return Math.floor((r + 0.0001) / sectorAngle) % N;
         }
 
         function randomInt(max){ return Math.floor(Math.random()*max); }
 
+        function payoutForBet(winnerNumber, bet){
+            const res = {won:false, net:0};
+            const n = Number(winnerNumber);
+            switch(bet.type){
+                case 'number':
+                    if(Number(bet.choice) === n){ res.won = true; res.net = bet.amount * 35; }
+                    break;
+                case 'color':
+                    // identify color of winner
+                    const pos = wheelNumbers.indexOf(n);
+                    const winColor = (n===0)?'green':colors[pos];
+                    if(bet.choice.toLowerCase() === winColor) { res.won = true; res.net = bet.amount * 1; }
+                    break;
+                case 'parity':
+                    if(n !== 0){
+                        if(bet.choice.toLowerCase()==='par' && n%2===0){ res.won=true; res.net = bet.amount *1; }
+                        if(bet.choice.toLowerCase()==='impar' && n%2===1){ res.won=true; res.net = bet.amount *1; }
+                    }
+                    break;
+                case 'highlow':
+                    if(n !== 0){
+                        if(bet.choice.toLowerCase()==='alto' && n>=19 && n<=36){ res.won=true; res.net = bet.amount *1; }
+                        if(bet.choice.toLowerCase()==='bajo' && n>=1 && n<=18){ res.won=true; res.net = bet.amount *1; }
+                    }
+                    break;
+                case 'dozen':
+                    if(n !== 0){
+                        if(bet.choice==='1' && n>=1 && n<=12){ res.won=true; res.net = bet.amount *2; }
+                        if(bet.choice==='2' && n>=13 && n<=24){ res.won=true; res.net = bet.amount *2; }
+                        if(bet.choice==='3' && n>=25 && n<=36){ res.won=true; res.net = bet.amount *2; }
+                    }
+                    break;
+            }
+            return res;
+        }
+
         function createConfetti(){
-            const count = 28;
+            const count = 40;
             for(let i=0;i<count;i++){
                 const d = document.createElement('div');
                 d.className = 'confetti-piece';
-                const color = colors[i % colors.length];
-                d.style.background = color;
-                const x = window.innerWidth/2 + (randomInt(200)-100);
-                const y = window.innerHeight/3;
-                d.style.left = x + 'px'; d.style.top = y + 'px';
+                d.style.background = (i%2===0)?'#ffd36b':'#6bffb3';
+                d.style.left = (window.innerWidth/2 + (randomInt(400)-200)) + 'px';
+                d.style.top = (window.innerHeight/4) + 'px';
                 document.body.appendChild(d);
-                // trigger animation
                 requestAnimationFrame(()=>{
                     const tx = (randomInt(800)-400);
-                    const ty = (randomInt(400)+200);
+                    const ty = (randomInt(600)+200);
                     const rot = randomInt(720);
-                    d.style.transition = 'transform 1200ms ease-out, opacity 1200ms ease-out';
+                    d.style.transition = 'transform 1400ms ease-out, opacity 1400ms ease-out';
                     d.style.transform = `translate(${tx}px, ${ty}px) rotate(${rot}deg)`;
                     d.style.opacity = '0';
                 });
-                setTimeout(()=> d.remove(), 1400);
+                setTimeout(()=> d.remove(), 1600);
             }
         }
 
-        function evaluateBet(winnerIndex, bet){
-            const win = {won:false, payout:0, message:''};
-            const winningNumber = winnerIndex + 1;
-            const winningColor = colorNames[winnerIndex % colorNames.length];
+        function spin(){
+            if(bets.length === 0){ alert('Añade al menos una apuesta antes de girar'); return; }
+            const totalStake = bets.reduce((s,b)=> s + b.amount, 0);
+            if(totalStake > balance){ alert('Saldo insuficiente'); return; }
+            // deduct stakes
+            balance -= totalStake;
+            balanceEl.textContent = balance.toFixed(2);
 
-            if(!bet || bet.amount <=0) {
-                win.message = `Salió ${winningNumber} (${winningColor}).`;
-                return win;
-            }
-
-            // deduct stake
-            balance -= bet.amount;
-
-            switch(bet.type){
-                case 'number':
-                    if(Number(bet.choice) === winningNumber){ win.won = true; win.payout = bet.amount * 12; }
-                    break;
-                case 'color':
-                    if(String(bet.choice).toLowerCase() === winningColor.toLowerCase()) { win.won = true; win.payout = bet.amount * 2; }
-                    break;
-                case 'parity':
-                    if(bet.choice === 'par' && winningNumber %2 === 0) { win.won = true; win.payout = bet.amount * 2; }
-                    if(bet.choice === 'impar' && winningNumber %2 === 1) { win.won = true; win.payout = bet.amount * 2; }
-                    break;
-                case 'highlow':
-                    if(bet.choice === 'alto' && winningNumber >=7) { win.won = true; win.payout = bet.amount * 2; }
-                    if(bet.choice === 'bajo' && winningNumber <=6) { win.won = true; win.payout = bet.amount * 2; }
-                    break;
-                case 'dozen':
-                    if(bet.choice === '1' && winningNumber>=1 && winningNumber<=4) { win.won = true; win.payout = bet.amount * 3; }
-                    if(bet.choice === '2' && winningNumber>=5 && winningNumber<=8) { win.won = true; win.payout = bet.amount * 3; }
-                    if(bet.choice === '3' && winningNumber>=9 && winningNumber<=12) { win.won = true; win.payout = bet.amount * 3; }
-                    break;
-            }
-
-            if(win.won) { balance += win.payout; win.message = `¡Ganaste! ${winningNumber} (${winningColor}) — Cobras ${win.payout} €.`; }
-            else { win.message = `Perdiste. Salió ${winningNumber} (${winningColor}).`; }
-            return win;
-        }
-
-        function spin(long=true){
-            spinBtn.disabled = true; quickBtn.disabled = true;
+            spinBtn.disabled = true; addBetBtn.disabled = true; clearBetsBtn.disabled = true;
             resultEl.textContent = 'Girando...';
 
-            const target = randomInt(N);
-            const spins = long ? (4 + randomInt(3)) : (1 + randomInt(2));
-            const final = spins*360 + target*sectorAngle + sectorAngle/2;
-            const duration = long ? 5600 : 1200;
-
-            // build bet object from UI
-            const bet = { type: betType.value, amount: Number(betAmount.value) || 0, choice: choiceInput.value };
-
-            // respects reduced motion
-            const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-            if(reduced){
-                setRotation(final, 0);
-                const winnerIndex = getLandedIndex(final);
-                const res = evaluateBet(winnerIndex, bet);
-                resultEl.textContent = res.message;
-                balanceEl.textContent = balance.toFixed(2);
-                spinBtn.disabled = false; quickBtn.disabled = false;
-                return;
-            }
-
-            clearSelectedLabels();
-            setRotation(final, duration);
+            const winnerPos = randomInt(N);
+            const spins = 5 + randomInt(4);
+            const finalDeg = spins*360 + winnerPos*sectorAngle + sectorAngle/2;
+            setRotation(finalDeg, 6000);
 
             const onEnd = ()=>{
                 wheel.style.transition = '';
-                const winnerIndex = getLandedIndex(final);
+                const landedPos = getWinnerPositionFromFinal(finalDeg);
+                const winnerNumber = wheelNumbers[landedPos];
+
                 // highlight winner
-                const labels = wheel.querySelectorAll('.wheel-label');
-                labels.forEach(l=> l.classList.remove('winner'));
-                const winnerLabel = wheel.querySelector(`.wheel-label[data-index='${winnerIndex}']`);
+                wheel.querySelectorAll('.wheel-label').forEach(l=> l.classList.remove('winner'));
+                const winnerLabel = wheel.querySelector(`.wheel-label[data-pos='${landedPos}']`);
                 if(winnerLabel) winnerLabel.classList.add('winner');
 
-                const res = evaluateBet(winnerIndex, bet);
-                resultEl.textContent = res.message;
+                // evaluate bets
+                let messageParts = [];
+                let anyWin = false;
+                bets.forEach(b=>{
+                    const p = payoutForBet(winnerNumber, b);
+                    if(p.won){ anyWin = true; balance += b.amount + p.net; messageParts.push(`Ganaste ${p.net} € en ${b.type} (${b.choice})`); }
+                    else { messageParts.push(`Perdiste ${b.amount} € en ${b.type} (${b.choice})`); }
+                });
+                resultEl.textContent = `Resultado: ${winnerNumber}. ` + messageParts.join(' — ');
+                totalStakeEl.textContent = '0';
+                bets = []; refreshBetsUI();
                 balanceEl.textContent = balance.toFixed(2);
 
-                if(res.won) createConfetti();
+                if(anyWin) createConfetti();
 
-                spinBtn.disabled = false; quickBtn.disabled = false;
+                spinBtn.disabled = false; addBetBtn.disabled = false; clearBetsBtn.disabled = false;
                 wheel.removeEventListener('transitionend', onEnd);
             };
             wheel.addEventListener('transitionend', onEnd);
         }
 
-        spinBtn.addEventListener('click', ()=> spin(true));
-        quickBtn.addEventListener('click', ()=> spin(false));
+        function getWinnerPositionFromFinal(finalDeg){
+            return Math.floor(((360 - (finalDeg % 360)) % 360 + 0.0001) / sectorAngle) % N;
+        }
 
-        // UI helpers: update choice placeholder depending on bet type
-        betType.addEventListener('change', ()=>{
-            choiceInput.value = '';
-            switch(betType.value){
-                case 'number': choiceInput.placeholder = 'Introduce número 1-12 o haz clic en la ruleta'; break;
-                case 'color': choiceInput.placeholder = 'Rojo / Amarillo / Verde / Azul'; break;
-                case 'parity': choiceInput.placeholder = 'par / impar'; break;
-                case 'highlow': choiceInput.placeholder = 'bajo / alto'; break;
-                case 'dozen': choiceInput.placeholder = '1 / 2 / 3 (docena)'; break;
-            }
-        });
+        spinBtn.addEventListener('click', spin);
 
-        // init
+        // init UI
+        refreshBetsUI();
         balanceEl.textContent = balance.toFixed(2);
-        choiceInput.placeholder = 'Introduce elección (ver tipos)';
+        resultEl.textContent = 'Listo — añade apuestas y pulsa Girar.';
 
     })();
     </script>

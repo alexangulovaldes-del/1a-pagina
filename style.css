@@ -11,4 +11,163 @@ header, main, footer {
     margin: 0 auto;
     max-width: 800px;
 }
+/* -----------------------------
+   Animated background & shapes
+   ----------------------------- */
+
+:root {
+    --bg1: #0f172a;
+    --bg2: #071228;
+    --accent1: #ff6b6b;
+    --accent2: #6bffb3;
+    --accent3: #6b8bff;
+    --accent4: #ffd36b;
+    --anim-duration: 12s;
+    --soft-blur: 80px;
+}
+
+html, body {
+    height: 100%;
+    margin: 0;
+    padding: 0;
+    font-family: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial;
+    background: linear-gradient(180deg, var(--bg1), var(--bg2));
+    color: #111;
+    overflow-x: hidden;
+}
+
+/* Layered animated blobs using pseudo-elements (no HTML changes required) */
+body::before, body::after {
+    content: "";
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+}
+
+body::before {
+    background-image:
+        radial-gradient(600px 400px at var(--b1-x,10%) var(--b1-y,20%), rgba(255,107,107,0.25), transparent 30%),
+        radial-gradient(500px 350px at var(--b2-x,90%) var(--b2-y,80%), rgba(107,255,179,0.20), transparent 30%),
+        radial-gradient(420px 320px at var(--b3-x,50%) var(--b3-y,40%), rgba(107,139,255,0.18), transparent 30%);
+    background-repeat: no-repeat;
+    filter: blur(var(--soft-blur));
+    transform: translateZ(0);
+    animation: blobMove var(--anim-duration) linear infinite, hueShift 20s linear infinite;
+    opacity: 0.95;
+}
+
+body::after {
+    background-image: conic-gradient(from 90deg at 50% 50%, rgba(255,211,107,0.18), rgba(255,107,107,0.12), rgba(107,255,179,0.12), rgba(107,139,255,0.12));
+    background-size: 60vmax 60vmax;
+    background-position: center;
+    filter: blur(36px) saturate(120%);
+    transform-origin: center;
+    animation: rotateSlow 30s linear infinite, pulse 8s ease-in-out infinite;
+    opacity: 0.9;
+}
+
+@keyframes blobMove {
+    0% {
+        --b1-x: 5%; --b1-y: 15%;
+        --b2-x: 95%; --b2-y: 85%;
+        --b3-x: 50%; --b3-y: 40%;
+        transform: translateY(0) rotate(0deg) scale(1);
+    }
+    25% {
+        --b1-x: 20%; --b1-y: 30%;
+        --b2-x: 80%; --b2-y: 65%;
+        --b3-x: 60%; --b3-y: 20%;
+        transform: translateY(-10px) rotate(6deg) scale(1.03);
+    }
+    50% {
+        --b1-x: 10%; --b1-y: 5%;
+        --b2-x: 90%; --b2-y: 80%;
+        --b3-x: 40%; --b3-y: 60%;
+        transform: translateY(0) rotate(-4deg) scale(0.99);
+    }
+    75% {
+        --b1-x: 15%; --b1-y: 25%;
+        --b2-x: 85%; --b2-y: 70%;
+        --b3-x: 55%; --b3-y: 45%;
+        transform: translateY(8px) rotate(3deg) scale(1.02);
+    }
+    100% {
+        --b1-x: 5%; --b1-y: 15%;
+        --b2-x: 95%; --b2-y: 85%;
+        --b3-x: 50%; --b3-y: 40%;
+        transform: translateY(0) rotate(0deg) scale(1);
+    }
+}
+
+@keyframes rotateSlow {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+
+@keyframes hueShift {
+    0% { filter: hue-rotate(0deg) blur(var(--soft-blur)); }
+    50% { filter: hue-rotate(60deg) blur(calc(var(--soft-blur) - 20px)); }
+    100% { filter: hue-rotate(120deg) blur(var(--soft-blur)); }
+}
+
+@keyframes pulse {
+    0%,100% { opacity:0.9; transform: scale(1); }
+    50% { opacity:0.7; transform: scale(1.06); }
+}
+
+/* Utility shapes you can add in HTML if you want extra floating, rotating blobs:
+   <div class="shape shape--1"></div>
+   <div class="shape shape--2"></div>
+   <div class="shape shape--3"></div>
+*/
+.shape {
+    position: fixed;
+    width: var(--s-size, clamp(100px, 20vmin, 320px));
+    height: var(--s-size, clamp(100px, 20vmin, 320px));
+    border-radius: 42% 58% 65% 35% / 40% 45% 55% 60%;
+    filter: blur(8px) saturate(140%);
+    opacity: 0.85;
+    pointer-events: none;
+    mix-blend-mode: screen;
+    animation: shapeFloat var(--anim-duration) ease-in-out infinite;
+    z-index: 0;
+}
+
+.shape--1 { --s-size:180px; left:6%; top:10%; background: radial-gradient(circle at 30% 30%, rgba(255,107,107,0.95), rgba(255,171,171,0.4)); animation-duration:18s; }
+.shape--2 { --s-size:220px; right:8%; top:18%; background: radial-gradient(circle at 40% 40%, rgba(107,255,179,0.92), rgba(171,255,214,0.4)); animation-duration:22s; animation-direction:reverse; }
+.shape--3 { --s-size:160px; left:18%; bottom:12%; background: radial-gradient(circle at 45% 55%, rgba(107,139,255,0.95), rgba(171,190,255,0.45)); animation-duration:20s; }
+
+@keyframes shapeFloat {
+    0% { transform: translateY(0) rotate(0deg) scale(1); }
+    25% { transform: translateY(-18px) rotate(12deg) scale(1.02); }
+    50% { transform: translateY(0) rotate(-8deg) scale(0.98); }
+    75% { transform: translateY(12px) rotate(6deg) scale(1.01); }
+    100% { transform: translateY(0) rotate(0deg) scale(1); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    body::before, body::after, .shape { animation: none !important; transition: none !important; }
+}
+
+/* Keep original site layout styles visible and readable */
+h1 {
+    font-size: 2rem;
+    color: #fff;
+    text-shadow: 0 6px 18px rgba(0,0,0,0.6);
+}
+p {
+    font-size: 1rem;
+    color: #e6eef8;
+}
+header, main, footer {
+    padding: 1rem;
+    margin: 0 auto;
+    max-width: 1000px;
+    position: relative;
+    z-index: 10;
+    background: rgba(255,255,255,0.02);
+    border-radius: 12px;
+    backdrop-filter: blur(6px);
+}
 
